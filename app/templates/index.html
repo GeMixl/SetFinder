@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <h2>Take a Photo</h2>
+    <button id="start-camera">Start Camera</button>
+    <video id="camera" width="240" height="320" autoplay></video>
+    <button id="take-photo">Take Photo</button>
+    <canvas id="photo" width="240" height="320" style="display:none;"></canvas>
+    <form id="photo-form" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="photo" id="photo-data">
+        <button type="submit">Upload Photo</button>
+    </form>
+    <button id="analyze-photo">Find Set</button>
+<table id="sets-table" border="1" style="display:none;">
+    <thead>
+        <tr>
+            <th>Form</th>
+            <th>Anzahl</th>
+            <th>Farbe</th>
+            <th>Fullung</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+    <script>
+        const startCameraButton = document.getElementById('start-camera');
+        const video = document.getElementById('camera');
+        const takePhotoButton = document.getElementById('take-photo');
+        const canvas = document.getElementById('photo');
+        const photoForm = document.getElementById('photo-form');
+        const photoDataInput = document.getElementById('photo-data');
+
+        startCameraButton.addEventListener('click', async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        });
+
+        takePhotoButton.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const photoData = canvas.toDataURL('image/png');
+            photoDataInput.value = photoData;
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+        });
+
+        photoForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(photoForm);
+            const response = await fetch('/upload_photo', {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                alert('Photo uploaded successfully!');
+            } else {
+                alert('Failed to upload photo.');
+            }
+        });
+
+       document.getElementById('analyze-photo').addEventListener('click', async () => {
+            const response = await fetch('/find_sets', {
+                method: 'GET'
+            });
+            if (response.ok) {
+                const sets = await response.json();
+                alert('Sets found: ' + JSON.stringify(sets));
+            } else {
+                alert('Failed to find sets.');
+            }
+        });
+
+       const setsTable = document.getElementById('sets-table');
+        const setsTableBody = setsTable.querySelector('tbody');
+        setsTableBody.innerHTML = ''; // Clear previous results
+
+        sets.forEach(set => {
+            const row = document.createElement('tr');
+            set.forEach(card => {
+                const cell = document.createElement('td');
+                cell.textContent = JSON.stringify(card);
+                row.appendChild(cell);
+            });
+            setsTableBody.appendChild(row);
+        });
+        setsTable.style.display = 'block';
+    </script>
+</body>
+</html>
